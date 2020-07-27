@@ -4,6 +4,9 @@ import numpy as np
 # Dezeroの変数をVariableクラスとして実装
 class Variable:
     def __init__(self, data):
+        if data is not None:
+            if not isinstance(data, np.ndarray):
+                raise TypeError("{} is not suported".format(type(data)))
         self.data = data
         self.grad = None
         self.creator = None
@@ -12,6 +15,9 @@ class Variable:
         self.creator = func
 
     def backward(self):
+        if self.grad is None:
+            self.grad = np.ones_like(self.data)
+
         funcs = [self.creator]
         while funcs:
             f = funcs.pop()  # 関数を取得
@@ -27,7 +33,7 @@ class Function:
     def __call__(self, input):
         x = input.data
         y = self.forward(x)
-        output = Variable(y)
+        output = Variable(as_array(y))
         output.set_creator(self)  # 出力変数に海の親を覚えさせる
         self.input = input  # 入力された変数を覚える
         self.output = output  # 出力も覚える
@@ -78,17 +84,23 @@ def f(x):
     return C(B(A(x)))
 
 
+# pythonの関数として使えるように
+def square(x):
+    return Square()(x)  # 1行でまとめて書くことが可能
+
+
+def exp(x):
+    return Exp()(x)
+
+
+# スカラー量をndarray変換する関数　numpyの仕様で出力結果がndarray以外の型になってしまうため
+def as_array(x):
+    if np.isscalar(x):
+        return np.array(x)
+    return x
+
+
 if __name__ == "__main__":
-    A = Square()
-    B = Exp()
-    C = Square()
-
-    x = Variable(np.array(0.5))
-    a = A(x)
-    b = B(a)
-    y = C(b)
-
-    # 逆伝播
-    y.grad = np.array(1.0)
-    y.backward()
-    print(x.grad)
+    # x = Variable(np.array(1.0))
+    # x = Variable(None)
+    x = Variable(1.0)
